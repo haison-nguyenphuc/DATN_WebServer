@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Bootstrap 4.5.3 Responsive Header</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
+
+    <style>
+        .navbar {
+            background-color: #343a40;
+            /* Đổi màu nền thành màu gray-dark */
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            /* Đổi font chữ thành đậm */
+            font-family: serif;
+        }
+
+        .nav-item-turn-on-off {
+            margin-right: 10px;
+        }
+
+        .btn-turn-on-off {
+            background-color: red !important;
+            color: white !important;
+            width: 150px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid black !important;
+            border-radius: 5px;
+        }
+
+        .btn-turn-on-off:hover {
+            transition: background-color 0.3s ease;
+            background-color: #343a40 !important;
+        }
+
+        .password-form-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: auto;
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .password-form {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+            z-index: 1000;
+        }
+
+        .password-form h5 {
+            margin-bottom: 20px;
+        }
+
+        .password-form label {
+            display: block;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+
+        .password-form input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .password-form button {
+            background: #007bff;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .password-form button:hover {
+            background: #0056b3;
+        }
+
+        .password-form .btn-cancel {
+            background: #dc3545;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .password-form .btn-cancel:hover {
+            background: #bd2130;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-md navbar-dark bg-secondary">
+        <a class="navbar-brand" href="/overview" style="font-family: 'Brush Script MT', cursive;">HUST APARTMENT</a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item nav-item-turn-on-off">
+                    <div class="btn-frame">
+                        <button id="turnOnOffAlarmBtn" class="btn btn-turn-on-off"
+                            onclick="showPasswordForm(this)"></button>
+                    </div>
+                </li>
+                <li class="nav-item">
+                    <button id="gatewayButton" class="btn">Gateway</button>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/overview">Tổng quan</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/profile">Thông tin cá nhân</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/account">Quản lý tài khoản</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/device">Quản lý thiết bị</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/password">Đổi mật khẩu</a>
+                </li>
+                <li class="nav-item">
+                    <a class="btn btn-danger" href="/login">Đăng xuất</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Form Xác thực Mật khẩu -->
+    <div id="passwordForm" class="password-form-container" contenteditable="false">
+        <div class="password-form" tabindex="0" contenteditable="false" onkeydown="handleDivEnter(event)">
+            <h5>Xác thực mật khẩu</h5>
+            <label for="passwordInput">Nhập mật khẩu:</label>
+            <input type="password" id="passwordInput" class="form-control" onfocus="resetErrorMessages()">
+            <button type="button" onclick="confirmPassword(buttonID)" class="btn btn-primary"
+                contenteditable="false">Xác thực</button>
+            <button type="button" onclick="closePasswordForm(buttonID)" class="btn btn-cancel"
+                contenteditable="false">Thoát</button>
+            <!-- Thông báo thất bại -->
+            <div class="alert alert-danger mt-2" role="alert" id="errorAlert" style="display: none;">
+                Thất bại! Mật khẩu không đúng.
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        let password;
+        let turnOnOffSignal;
+        let clickedButton = false;
+        let buttonID;
+        let oldColor = "";
+
+        function confirmPassword() {
+            const passwordInput = document.getElementById('passwordInput').value;
+            if (password === passwordInput) {
+                document.getElementById('passwordForm').style.display = 'none';
+                if (buttonID == "turnOnOffAlarmBtn") {
+                    turnOnOffAlarm();
+                } else {
+                    updateTable();
+                }
+            } else {
+                document.getElementById('errorAlert').style.display = 'block';
+            }
+        }
+
+        function checkAlarm(locations) {
+            let alarm = 'OFF';
+
+            for (let i = 0; i < locations.length; i++) {
+                if (locations[i].alarm == 'ON') {
+                    alarm = 'ON';
+                }
+            }
+
+            return (alarm == 'ON') ? true : false;
+        }
+
+        function checkConnectCount(locations) {
+            let connectCount;
+
+            for (let i = 0; i < locations.length; i++) {
+                if (locations[i].deviceState == 'ON') {
+                    connectCount++;
+                }
+            }
+
+            return (connectCount > 0) ? true : false;
+        }
+
+        function navbarUpdateProgress() {
+            axios.get('/api/turnOnOffAlarm')
+                .then(function (response) {
+                    const locations = response.data.locations;
+                    const gatewayConnect = response.data.serialConnectState;
+                    const gatewayButton = document.getElementById('gatewayButton');
+                    const turnOnOffAlarmButton = document.getElementById('turnOnOffAlarmBtn');
+
+                    password = response.data.password;
+
+                    if (checkAlarm(locations)) {
+                        turnOnOffAlarmButton.textContent = 'Tắt báo động';
+                        turnOnOffSignal = 'OFF';
+                    } else {
+                        turnOnOffAlarmButton.textContent = 'Bật báo động';
+                        turnOnOffSignal = 'ON';
+                    }
+
+                    if (gatewayConnect == 'ON') {
+                        gatewayButton.style.backgroundColor = 'greenyellow';
+                        gatewayButton.style.color = 'black';
+                    } else {
+                        gatewayButton.style.backgroundColor = '#c6ced5';
+                        gatewayButton.style.color = 'gray';
+                    }
+                })
+                .catch(function (error) {
+                    console.error(error);
+                });
+        }
+
+        function turnOnOffAlarm() {
+            clickedButton = true;
+            axios.post('/api/turnOnOffAlarm', { turnOnOffSignal })
+                .then(function (response) {
+                    console.log(response);
+                })
+                .catch(function (error) {
+                    console.error(error);
+                });
+        }
+
+        function showPasswordForm(button) {
+            // Hiển thị overlay
+            document.getElementById('passwordForm').style.display = 'flex';
+            if (button.id == 'turnOnOffAlarmBtn') {
+                buttonID = 'turnOnOffAlarmBtn';
+            } else {
+                buttonID = 'updateDeviceBtn';
+            }
+        }
+
+        function handleDivEnter(event) {
+            if (event.key === 'Enter') {
+                // Ngăn chặn hành động mặc định của Enter (ví dụ: xuống dòng)
+                event.preventDefault();
+                // Gọi hàm xác thực mật khẩu
+                confirmPassword();
+            }
+        }
+
+        function resetErrorMessages() {
+            // Ẩn thông báo thất bại khi click vào input
+            document.getElementById('errorAlert').style.display = 'none';
+        }
+
+        function closePasswordForm() {
+            // Ẩn overlay và form xác thực mật khẩu khi nhấn nút "Thoát"
+            document.getElementById('passwordForm').style.display = 'none';
+            document.getElementById('errorAlert').style.display = 'none';
+
+            console.log(buttonID);
+            if (buttonID == 'updateDeviceBtn') {
+                location.reload();
+            }
+        }
+
+        setInterval(navbarUpdateProgress, 100);
+    </script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+
+</html>

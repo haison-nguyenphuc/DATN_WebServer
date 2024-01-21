@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Circle Progress Bar Bootstrap 5</title>
+    <!-- Bao gồm thư viện CSS của Bootstrap 5 -->
+</head>
+
+<body style="background-image: url(/img/background.jpg);">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <h2>Thông tin chủ hộ</h2>
+                <p><strong>Họ và tên: </strong> <span id="name"></span></p>
+                <p><strong>Email: </strong><span id="email"></span></p>
+                <p><strong>Số điện thoại: </strong><span id="phone"></span></p>
+                <p><strong>Vị trí: </strong><span id="location"></span></p>
+                <p><strong>Thiết bị: </strong><span id="deviceID"></span></p>
+                <p><strong>Trạng thái: </strong><span id="deviceState"></span></p>
+                <button id="resetData" class="custom-button btn btn-primary btn-block" onclick="resetData()">Reset
+                    dữ liệu</button>
+            </div>
+
+            <div class="col-md-6">
+                <div class="progress color" id="temperatureAlarm">
+                    <span class="progress-left">
+                        <span class="progress-bar"></span>
+                    </span>
+                    <span class="progress-right">
+                        <span class="progress-bar"></span>
+                    </span>
+                    <div class="progress-value"><strong>Nhiệt độ:</strong> <strong id="temperatureValue"></strong></div>
+                </div>
+
+                <div class="progress color" id="smokeAlarm">
+                    <span class="progress-left">
+                        <span class="progress-bar"></span>
+                    </span>
+                    <span class="progress-right">
+                        <span class="progress-bar"></span>
+                    </span>
+                    <div class="progress-value"><strong>Nồng độ khói:</strong> <strong id="smokeValue"></strong></div>
+                </div>
+                <div class="progress color" id="pinState">
+                    <span class="progress-left">
+                        <span class="progress-bar"></span>
+                    </span>
+                    <span class="progress-right">
+                        <span class="progress-bar"></span>
+                    </span>
+                    <div class="progress-value"><strong>Dung lượng PIN:</strong> <strong id="pinValue"></strong></div>
+                </div>
+
+                <div class="progress color" id="flameAlarm">
+                    <span class="progress-left">
+                        <span class="progress-bar"></span>
+                    </span>
+                    <span class="progress-right">
+                        <span class="progress-bar"></span>
+                    </span>
+                    <div class="progress-value"><strong>Báo lửa: </strong> <strong id="flameState"></strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        body {
+            background-color: transparent;
+        }
+
+        .custom-button {
+            height: 45px;
+            width: auto;
+            text-align: center;
+            border: solid;
+            margin: 2px;
+            z-index: 2;
+            transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out;
+        }
+
+        .custom-button:active {
+            transform: translateY(5px);
+        }
+
+        .custom-button:hover {
+            background-color: red;
+        }
+
+        .mt-100 {
+            margin-top: 100px;
+        }
+
+        .progress {
+            width: 180px;
+            height: 180px !important;
+            float: left;
+            line-height: 150px;
+            background: none;
+            margin: 20px;
+            box-shadow: none;
+            position: relative;
+            border-radius: 50%;
+        }
+
+        .progress:after {
+            content: "";
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 12px solid #fff;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .progress>span {
+            width: 50%;
+            height: 100%;
+            overflow: hidden;
+            position: absolute;
+            top: 0;
+            z-index: 1;
+        }
+
+        .progress .progress-left {
+            left: 0;
+        }
+
+        .progress .progress-bar {
+            width: 100%;
+            height: 100%;
+            background: none;
+            border-width: 15px;
+            border-style: solid;
+            position: absolute;
+            top: 0;
+        }
+
+        .progress .progress-left .progress-bar {
+            left: 100%;
+            border-top-right-radius: 100px;
+            border-bottom-right-radius: 100px;
+            border-left: 0;
+            transform-origin: center left;
+            animation: loading-1 1s linear forwards;
+        }
+
+        .progress .progress-right {
+            right: 0;
+        }
+
+        .progress .progress-right .progress-bar {
+            left: -100%;
+            border-top-left-radius: 100px;
+            border-bottom-left-radius: 100px;
+            border-right: 0;
+            transform-origin: center right;
+            animation: loading-1 1s linear forwards;
+        }
+
+        .progress .progress-value {
+            width: 90%;
+            height: 90%;
+            border-radius: 50%;
+            background: #000;
+            font-size: 12px;
+            color: #fff;
+            line-height: 165px;
+            text-align: center;
+            position: absolute;
+            top: 5%;
+            left: 5%;
+        }
+
+        .progress.color .progress-bar {
+            border-color: greenyellow;
+        }
+
+        .progress.color.active .progress-bar {
+            border-color: red;
+        }
+
+        @keyframes loading-1 {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(180deg);
+            }
+        }
+    </style>
+    <!-- Nhúng Axios từ CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <script>
+        let resetDataEnabled = true;
+
+        function updateProgress() {
+            axios.get('/api/location')
+                .then(function (response) {
+                    const location = response.data.location;
+                    const account = response.data.account;
+                    const datum = response.data.datum;
+                    const sessionAccountType = response.data.sessionAccountType;
+
+                    if (sessionAccountType == 'admin' && resetDataEnabled) {
+                        document.getElementById('resetData').disabled = false;
+                    } else {
+                        document.getElementById('resetData').disabled = true;
+                    }
+
+                    if (location == null) {
+                        document.getElementById('deviceID').innerText = "";
+                        document.getElementById('deviceState').innerText = "";
+                    } else {
+                        document.getElementById('deviceID').innerText = location.deviceID;
+                        document.getElementById('deviceState').innerText = location.deviceState;
+                    }
+
+                    if (account == null) {
+                        document.getElementById('name').innerText = "";
+                        document.getElementById('email').innerText = "";
+                        document.getElementById('phone').innerText = "";
+                        document.getElementById('location').innerText = "";
+                    } else {
+                        document.getElementById('name').innerText = account.name;
+                        document.getElementById('email').innerText = account.email;
+                        document.getElementById('phone').innerText = account.phone;
+                        document.getElementById('location').innerText = account.location;
+                    }
+
+                    if (datum == null) {
+                        document.getElementById('temperatureValue').innerText = " °C";
+                        document.getElementById('smokeValue').innerText = " ppm";
+                        document.getElementById('pinValue').innerText = " %";
+                        document.getElementById('flameState').innerText;
+                        document.getElementById('temperatureAlarm').classList.remove('active');
+                        document.getElementById('smokeAlarm').classList.remove('active');
+                        document.getElementById('flameAlarm').classList.remove('active');
+                    } else {
+                        document.getElementById('temperatureValue').innerText = datum.temperatureValue + " °C";
+                        document.getElementById('smokeValue').innerText = datum.smokeValue + " ppm";
+                        document.getElementById('pinValue').innerText = datum.pinValue + " %";
+
+                        if (datum.temperatureState == 'FIRE') {
+                            document.getElementById('temperatureAlarm').classList.add('active');
+                        } else {
+                            document.getElementById('temperatureAlarm').classList.remove('active');
+                        }
+
+                        if (datum.smokeState == 'FIRE') {
+                            document.getElementById('smokeAlarm').classList.add('active');
+                        } else {
+                            document.getElementById('smokeAlarm').classList.remove('active');
+                        }
+
+                        if (datum.flameState == 'FIRE') {
+                            document.getElementById('flameAlarm').classList.add('active');
+                            document.getElementById('flameState').innerText = "có lửa"
+                        } else {
+                            document.getElementById('flameAlarm').classList.remove('active');
+                            document.getElementById('flameState').innerText = "không lửa";
+                        }
+                    }
+                })
+                .catch(function (error) {
+                    // Xử lý lỗi nếu có
+                    console.error(error);
+                });
+        }
+
+        function resetData() {
+            resetDataEnabled = false;
+
+            axios.post('/api/location', { resetDataSignal: true })
+                .then(function (response) {
+                    console.log(response);
+                    setTimeout(() => {
+                        resetDataEnabled = true;
+                    }, 5000);
+                })
+                .catch(function (error) {
+                    console.error(error);
+                });
+        }
+
+        setInterval(updateProgress, 500);
+
+        document.addEventListener('DOMContentLoaded', function () {
+            updateProgress();
+        });
+    </script>
+
+</body>
+
+</html>

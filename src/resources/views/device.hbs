@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration</title>
+</head>
+
+<style>
+    tbody {
+        display: block;
+        max-height: 550px;
+        overflow-y: auto;
+    }
+
+    thead,
+    tbody tr {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
+    }
+
+    /* Thêm kiểu cho hình tròn trạng thái */
+    .status-indicator {
+        display: inline-block;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        margin-left: 10px;
+        border: solid 3px wheat;
+    }
+
+    /* Kiểu cho hình tròn trạng thái "On" */
+    .status-indicator.on {
+        background-color: rgb(30, 241, 121);
+    }
+
+    /* Kiểu cho hình tròn trạng thái "Off" */
+    .status-indicator.off {
+        background-color: rgb(249, 77, 4);
+    }
+</style>
+
+<body style="background-color: coral;">
+    <div class="container custom-container">
+        <div class="row">
+            <table id="deviceTable" class="table table-striped table-dark">
+                <thead>
+                    <tr>
+                        <th>Tên thiết bị</th>
+                        <th>Vị trí lắp đặt</th>
+                        <th>Chọn vị trí lắp đặt</th>
+                        <th>Trạng thái <button id="updateDeviceBtn" type="button" class="btn btn-primary"
+                                onclick="showPasswordForm(this)" style="margin-left: 50px;">Cập nhật</button></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Dòng trống để chứa dữ liệu -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        const selects = document.getElementsByClassName("location");
+        const deviceTable = document.getElementById('deviceTable');
+        let deviceList = [];
+        let selectedOptions = [];
+
+        updateProgress();
+
+        function updateProgress() {
+            axios.get('/api/device')
+                .then(async function (response) {
+                    const newDeviceList = response.data.devices;
+                    const alarm = response.data.alarm;
+                    const connectDeviceCount = response.data.connectDeviceCount;
+
+                    if (alarm == 'ON' && connectDeviceCount > 0) {
+                        document.getElementById("updateDeviceBtn").disabled = true;
+                    } else {
+                        document.getElementById("updateDeviceBtn").disabled = false;
+                    }
+
+                    // So sánh mảng mới với mảng cũ
+                    for (let i = 0; i < newDeviceList.length; i++) {
+                        const newDevice = newDeviceList[i];
+                        const existingDevice = findDeviceById(newDevice.id);
+
+                        if (!existingDevice) {
+                           await addNewDevice(newDevice);
+                        }
+
+                        await updateDeviceStatus(i + 1, newDevice.state);
+                    }
+                })
+                .catch(function (error) {
+                    // Xử lý lỗi nếu có
+                    console.error(error);
+                });
+        }
+
+        function findDeviceById(deviceId) {
+            return deviceList.find(device => device.id === deviceId);
+        }
+
+        function addNewDevice(newDevice) {
+            deviceList.push(newDevice);
+
+            const newRow = deviceTable.insertRow();
+            const cell1 = newRow.insertCell(0);
+            const cell2 = newRow.insertCell(1);
+            const cell3 = newRow.insertCell(2);
+            const cell4 = newRow.insertCell(3);
+
+            cell1.textContent = newDevice.deviceID;
+            cell2.textContent = newDevice.location;
+
+            if (newDevice.location !== "Không sử dụng") {
+                selectedOptions.push(newDevice.location);
+            }
+
+            const select = document.createElement("select");
+            select.className = "location custom-select";
+            select.onchange = function () { updateLocation(this, newRow.rowIndex - 1); };
+            updateSelects(select);
+
+            cell3.appendChild(select);
+
+            if (newDevice.state === 'ON') {
+                cell4.innerHTML = '<span class="status-indicator on"></span>';
+            } else {
+                cell4.innerHTML = '<span class="status-indicator off"></span>';
+            }
+
+            // Thêm các option cho select box
+            addOptionsToSelect(select);
+        }
+
+        function updateDeviceStatus(index, newStatus) {
+            const table = document.getElementById('deviceTable');
+
+            if (table && table.rows.length > index) {
+                const statusCell = table.rows[index].cells[3];
+
+                if (statusCell) {
+                    statusCell.innerHTML = newStatus === 'ON' ?
+                        '<span class="status-indicator on"></span>' :
+                        '<span class="status-indicator off"></span>';
+                } else {
+                    console.error(`Không tìm thấy ô tại index ${index}`);
+                }
+            } else {
+                console.error(`Bảng không có đủ hàng cho index ${index}`);
+            }
+        }
+
+
+        function addOptionsToSelect(select) {
+            addOption(select, "Chọn vị trí");
+            addOption(select, "Không sử dụng");
+            for (let j = 1; j <= 5; j++) {
+                for (let k = 1; k <= 4; k++) {
+                    addOption(select, "Phòng " + (j * 100 + k).toString());
+                }
+                addOption(select, "Hành lang tầng " + j.toString());
+                addOption(select, "Cầu thang " + j.toString() + "-" + (j + 1).toString());
+            }
+        }
+
+        function addOption(select, text) {
+            // Kiểm tra xem lựa chọn đã được chọn cho thiết bị khác chưa
+            if (!selectedOptions.includes(text)) {
+                let option = document.createElement("option");
+                option.text = text;
+                select.appendChild(option);
+            }
+        }
+
+        function updateLocation(select, index) {
+            let selectedIndex = select.selectedIndex;
+            let selectedText = select.options[selectedIndex].text;
+            deviceList[index].location = selectedText;
+
+            if (selectedText != "Không sử dụng") {
+                selectedOptions.push(selectedText);
+            }
+
+            let row = select.closest("tr");
+            if (row) {
+                let cell2InRow = row.cells[1];
+                if (cell2InRow) {
+                    const oldLocationIndex = selectedOptions.indexOf(cell2InRow.textContent);
+
+                    if (oldLocationIndex !== -1) {
+                        selectedOptions.splice(oldLocationIndex, 1);
+                    }
+                    cell2InRow.textContent = selectedText;
+                }
+            }
+
+            updateSelects();
+        }
+
+        function updateSelects() {
+            for (let i = 0; i < selects.length; i++) {
+                let currentSelect = selects[i];
+                selects[i].innerHTML = "";
+                addOptionsToSelect(selects[i]);
+            }
+        }
+
+        function updateTable() {
+            console.log(deviceList);
+            axios.post('/api/device', deviceList)
+                .then(function (response) {
+                    console.log(response);
+                })
+                .catch(function (error) {
+                    console.error(error);
+                });
+
+            location.reload();
+        }
+
+        setInterval(updateProgress, 500);
+    </script>
+
+</body>
+
+</html>
